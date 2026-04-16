@@ -6,8 +6,8 @@ from typing import Dict, List, Literal
 ModelName = Literal["densenet121", "resnext50_32x4d"]
 InitMode = Literal["scratch", "finetune"]
 
-DATASET_NAME = "CIFAR-10"
-NUM_CLASSES = 10
+DATASET_NAME = "Oxford-IIIT Pet"
+NUM_CLASSES = 37
 DEFAULT_SEED = 42
 DEFAULT_IMAGE_SIZE = 224
 DEFAULT_WEIGHT_DECAY = 1e-4

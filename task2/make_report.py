@@ -132,12 +132,12 @@ def main() -> None:
 \small
 
 \section{{研究目标}}
-本次任务比较两类典型卷积网络在图像分类任务上的两种训练策略：\textbf{{从头训练（from scratch）}}与\textbf{{微调（fine-tune）}}。实验统一采用 CIFAR-10 十分类数据集，并选取 DenseNet121 与 ResNeXt50\_32x4d 作为代表模型。全部训练在 GPU 环境中完成，本地仅负责整理结果与编译 PDF。
+本次任务比较两类典型卷积网络在细粒度图像分类任务上的两种训练策略：\textbf{{从头训练（from scratch）}}与\textbf{{微调（fine-tune）}}。实验统一采用 Oxford-IIIT Pet 37 类宠物品种数据集，并选取 DenseNet121 与 ResNeXt50\_32x4d 作为代表模型。全部训练在 GPU 环境中完成，本地仅负责整理结果与编译 PDF。
 
 仓库地址：\url{{{args.repo_url}}}
 
 \section{{模型与数据集}}
-CIFAR-10 含有 10 个常见物体类别，数据规模适中、下载方便、实验复现实成本低，适合作为本次“从头训练 vs 微调”的对比基准。实验将官方训练集划分为 80\% 训练集与 20\% 验证集，测试集保持官方 split 不变。由于所选骨干网络预训练于 ImageNet，输入尺寸统一调整为 $224\times224$，训练增强为 RandomResizedCrop、RandomHorizontalFlip、轻量 ColorJitter 与 ImageNet 归一化。
+Oxford-IIIT Pet 含有 37 个猫狗品种类别，图像分辨率较高，既适合展示迁移学习的优势，也更适合报告中的可视化分析。实验将官方 trainval 划分为 80\% 训练集与 20\% 验证集，测试集保持官方 split 不变。由于所选骨干网络预训练于 ImageNet，输入尺寸统一为 $224\times224$，训练增强为 RandomResizedCrop、RandomHorizontalFlip、轻量 ColorJitter 与 ImageNet 归一化。
 
 两组模型均来自 torchvision 官方实现。DenseNet121 通过密集连接缓解梯度传播问题；ResNeXt50\_32x4d 在残差结构中引入 grouped convolution，可在不显著增大复杂度的前提下增强表示能力。微调策略统一为：先冻结 backbone 仅训练分类头 3 个 epoch，再解冻全网络继续训练。
 
@@ -197,7 +197,7 @@ Run & Test Acc & Macro-F1 & Best Ep & Time \\
 \caption{{训练时间与测试精度的权衡。}}
 \end{{figure}}
 
-从结构层面看，DenseNet121 参数利用率较高，在中等规模分类任务上通常具有较好的速度与精度平衡；ResNeXt50\_32x4d 的容量更强，但也更依赖充足训练预算。如果 GPU 预算较紧，后者的单 epoch 训练时间更长，因而在同等预算下不一定总能取得绝对优势。
+从结构层面看，DenseNet121 参数利用率较高，往往更适合中等规模细粒度分类；ResNeXt50\_32x4d 的容量更强，但也更依赖充足训练预算。如果 GPU 预算较紧，后者的单 epoch 训练时间更长，因而在同等预算下不一定总能取得绝对优势。
 
 \begin{{figure}}[!ht]
 \centering
@@ -211,13 +211,13 @@ Run & Test Acc & Macro-F1 & Best Ep & Time \\
 \caption{{最佳模型中最常见的混淆类别对。}}
 \end{{figure}}
 
-从易混淆样例可以看到，主要错误通常集中在外观或背景相近的类别之间，例如猫狗、卡车汽车等。这说明模型已经学到了一定的语义信息，但在小尺寸图像被放大到 ImageNet 输入尺度后，局部纹理和背景仍然会对判断造成干扰。
+从易混淆样例可以看到，主要错误集中在毛色、脸部轮廓和耳朵形态相近的品种之间。这符合细粒度图像分类的一般规律：模型并非无法识别“猫”或“狗”，而是在相似品种之间仍然会受姿态、背景和局部遮挡影响。
 
 \section{{结论}}
-本次实验表明，在 CIFAR-10 这类标准图像分类任务上，\textbf{{微调通常显著优于从头训练}}。预训练模型不仅在前期收敛更快，也往往能在最终测试指标上取得更高结果。对于课程作业而言，这一结论足以支撑“从头训练 V.S. 微调”的核心对比：预训练不是简单的加速技巧，而是改变优化起点与泛化性能的关键因素。
+本次实验表明，在 Oxford-IIIT Pet 这类中等规模、细粒度的图像分类任务上，\textbf{{微调通常显著优于从头训练}}。预训练模型不仅在前期收敛更快，也往往能在最终测试指标上取得更高结果。对于课程作业而言，这一结论足以支撑“从头训练 V.S. 微调”的核心对比：预训练不是简单的加速技巧，而是改变优化起点与泛化性能的关键因素。
 
 \section{{参考文献}}
-[1] A. Krizhevsky. Learning Multiple Layers of Features from Tiny Images.\par
+[1] M. Parkhi, A. Vedaldi, A. Zisserman, C. Jawahar. Cats and Dogs.\par
 [2] G. Huang, Z. Liu, L. van der Maaten, K. Weinberger. Densely Connected Convolutional Networks.\par
 [3] S. Xie, R. Girshick, P. Dollár, Z. Tu, K. He. Aggregated Residual Transformations for Deep Neural Networks.\par
 [4] TorchVision Documentation and Pre-trained Model Zoo.
