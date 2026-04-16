@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Sequence
+from typing import List
 
 import numpy as np
-from torch.utils.data import DataLoader, Dataset, Subset
+from torch.utils.data import DataLoader, Subset
 from torchvision import transforms
-from torchvision.datasets import OxfordIIITPet
+from torchvision.datasets import CIFAR10
 
-from .config import DEFAULT_SEED, NUM_CLASSES
+from .config import DATASET_NAME, DEFAULT_SEED
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -25,67 +24,6 @@ class DatasetBundle:
     train_size: int
     val_size: int
     test_size: int
-    label_offset: int
-
-
-class LabelAdjustedDataset(Dataset):
-    def __init__(self, base: Dataset, label_offset: int) -> None:
-        self.base = base
-        self.label_offset = label_offset
-
-    def __len__(self) -> int:
-        return len(self.base)
-
-    def __getitem__(self, index: int):
-        image, target = self.base[index]
-        return image, int(target) - self.label_offset
-
-
-def _extract_raw_targets(dataset: Dataset) -> List[int]:
-    for attr in ("_labels", "labels", "targets", "_targets"):
-        raw = getattr(dataset, attr, None)
-        if raw is None:
-            continue
-        return [int(x) for x in raw]
-    targets: List[int] = []
-    for idx in range(len(dataset)):
-        _, target = dataset[idx]
-        targets.append(int(target))
-    return targets
-
-
-def _infer_label_offset(targets: Sequence[int]) -> int:
-    if not targets:
-        return 0
-    min_label = int(min(targets))
-    max_label = int(max(targets))
-    if min_label == 1 and max_label == NUM_CLASSES:
-        return 1
-    return 0
-
-
-def _breed_name_from_path(path_like: str) -> str:
-    stem = Path(path_like).stem
-    stem = re.sub(r"_\d+$", "", stem)
-    return stem.replace("_", " ")
-
-
-def _extract_class_names(dataset: Dataset, label_offset: int) -> List[str]:
-    classes = getattr(dataset, "classes", None)
-    if isinstance(classes, list) and len(classes) == NUM_CLASSES:
-        return [str(name).replace("_", " ") for name in classes]
-
-    image_paths = getattr(dataset, "_images", None)
-    raw_targets = _extract_raw_targets(dataset)
-    if image_paths is not None and len(image_paths) == len(raw_targets):
-        mapping = {}
-        for image_path, raw_label in zip(image_paths, raw_targets):
-            label = int(raw_label) - label_offset
-            mapping.setdefault(label, _breed_name_from_path(str(image_path)))
-        if len(mapping) == NUM_CLASSES:
-            return [mapping[idx] for idx in range(NUM_CLASSES)]
-
-    return [f"class_{idx}" for idx in range(NUM_CLASSES)]
 
 
 def _build_transforms(image_size: int):
@@ -119,43 +57,29 @@ def build_dataloaders(
 ) -> DatasetBundle:
     train_transform, eval_transform = _build_transforms(image_size)
     base_root = Path(data_root)
-    raw_trainval = OxfordIIITPet(root=base_root, split="trainval", target_types="category", download=True)
-    raw_targets = _extract_raw_targets(raw_trainval)
-    label_offset = _infer_label_offset(raw_targets)
-    class_names = _extract_class_names(raw_trainval, label_offset)
+    raw_train = CIFAR10(root=base_root, train=True, download=True)
+    class_names = [str(name) for name in raw_train.classes]
 
-    train_dataset = LabelAdjustedDataset(
-        OxfordIIITPet(
-            root=base_root,
-            split="trainval",
-            target_types="category",
-            transform=train_transform,
-            download=False,
-        ),
-        label_offset=label_offset,
+    train_dataset = CIFAR10(
+        root=base_root,
+        train=True,
+        transform=train_transform,
+        download=False,
     )
-    eval_trainval = LabelAdjustedDataset(
-        OxfordIIITPet(
-            root=base_root,
-            split="trainval",
-            target_types="category",
-            transform=eval_transform,
-            download=False,
-        ),
-        label_offset=label_offset,
+    eval_train = CIFAR10(
+        root=base_root,
+        train=True,
+        transform=eval_transform,
+        download=False,
     )
-    test_dataset = LabelAdjustedDataset(
-        OxfordIIITPet(
-            root=base_root,
-            split="test",
-            target_types="category",
-            transform=eval_transform,
-            download=True,
-        ),
-        label_offset=label_offset,
+    test_dataset = CIFAR10(
+        root=base_root,
+        train=False,
+        transform=eval_transform,
+        download=True,
     )
 
-    indices = np.arange(len(raw_trainval))
+    indices = np.arange(len(raw_train))
     rng = np.random.default_rng(seed)
     rng.shuffle(indices)
     split = int(len(indices) * 0.8)
@@ -171,7 +95,7 @@ def build_dataloaders(
         pin_memory=pin_memory,
     )
     val_loader = DataLoader(
-        Subset(eval_trainval, val_indices),
+        Subset(eval_train, val_indices),
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
@@ -193,6 +117,5 @@ def build_dataloaders(
         train_size=len(train_indices),
         val_size=len(val_indices),
         test_size=len(test_dataset),
-        label_offset=label_offset,
+        label_offset=0,
     )
-

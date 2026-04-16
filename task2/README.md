@@ -1,6 +1,6 @@
-# Task 2: Scratch vs Fine-tune on Oxford-IIIT Pet
+# Task 2: Scratch vs Fine-tune on CIFAR-10
 
-这个目录是课程作业二的完整实现，目标是在 `Oxford-IIIT Pet` 上比较两类 CNN 模型的 `from scratch` 与 `fine-tune`：
+这个目录是课程作业二的完整实现，目标是在 `CIFAR-10` 上比较两类 CNN 模型的 `from scratch` 与 `fine-tune`：
 
 - `DenseNet121`
 - `ResNeXt50_32x4d`
@@ -109,4 +109,3 @@ runs/<model>_<mode>_<timestamp>/
 - 若 Colab 免费 GPU 显存不足，优先把 `ResNeXt50_32x4d` 的 batch size 从 `48` 改到 `32`
 - `run_all.py` 会在总训练时长不足 `7200` 秒时，自动从 scratch checkpoint 继续追加训练
 - 正式提交 PDF 时不要附代码，只放仓库地址
-
