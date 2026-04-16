@@ -10,6 +10,7 @@ full_run.log
 one_run.log
 report.log
 summarize.log
+make_report.py
 report/figs/
 report/main.tex
 report/*.pdf
