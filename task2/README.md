@@ -1,100 +1,77 @@
 # Task 2: Scratch vs Fine-tune on Oxford-IIIT Pet
 
-这个目录是课程作业二的完整实现，目标是在 `Oxford-IIIT Pet` 上比较两类 CNN 模型的 `from scratch` 与 `fine-tune`：
+本目录对应课程作业二，主题是比较卷积神经网络的两种训练方式：
+
+- 从头训练（from scratch）
+- 微调（fine-tune）
+
+实验数据集为 `Oxford-IIIT Pet`，对比模型为：
 
 - `DenseNet121`
 - `ResNeXt50_32x4d`
 
-核心交付包括：
+仓库主要保留代码、训练脚本和结果生成脚本；最终提交用的报告正文、PDF 和图表只在本地保存，不放到公开仓库。
 
-- Colab 实验 notebook：`colab_notebook.ipynb`
-- 训练脚本与汇总代码：`src/`、`train.py`、`run_all.py`、`summarize_runs.py`
-- LaTeX 报告模板与生成脚本：`report/main.tex`、`make_report.py`
+## 目录说明
 
-## 目录结构
+- `src/`：数据读取、模型构建、训练循环、评价指标和绘图逻辑
+- `train.py`：单组实验入口
+- `run_all.py`：顺序执行四组主实验，并在累计训练时间不足 2 小时时继续追加 scratch 组训练
+- `summarize_runs.py`：汇总 `runs/` 中的结果，生成 `summary.json`、`summary.csv` 和图表
+- `make_report.py`：根据汇总结果生成报告 LaTeX 源文件
+- `colab_notebook.ipynb`：早期实验 notebook，保留作参考
 
-- `colab_notebook.ipynb`：Colab 端到端运行入口
-- `src/`：数据、模型、训练、绘图等逻辑
-- `train.py`：单次实验 CLI
-- `run_all.py`：顺序跑 4 组主实验，并在总训练时间不足 2 小时时继续扩展 scratch 组
-- `summarize_runs.py`：读取 `runs/*/results.json`，生成汇总图和 `summary.json`
-- `make_report.py`：根据汇总结果输出 `report/main.tex`
-- `report/`：PDF 报告目录
+## 复现实验
 
-## Colab 推荐流程
+建议在有 GPU 的 Linux 环境中运行。
 
-1. 打开 `colab_notebook.ipynb`
-2. 挂载 Google Drive
-3. 克隆你的 GitHub 仓库到 Drive 或 `/content`
-4. 安装轻量依赖：
+先跑单组实验：
 
 ```bash
-pip install -q -r task2/requirements-colab.txt
-```
-
-5. 先执行四组 `1 epoch smoke test`
-6. 再执行正式训练：
-
-```bash
-python task2/run_all.py \
-  --data-root /content/drive/MyDrive/task2_pet/data \
-  --output-root /content/drive/MyDrive/task2_pet/runs \
+python train.py \
+  --preset densenet121_finetune \
+  --data-root data \
+  --output-root runs \
   --device cuda \
   --num-workers 2
 ```
 
-7. 训练结束后汇总结果：
+再跑四组正式实验：
 
 ```bash
-python task2/summarize_runs.py \
-  --runs-root /content/drive/MyDrive/task2_pet/runs \
-  --report-dir /content/drive/MyDrive/task2_pet/report
-```
-
-8. 将 `runs/` 和 `report/` 同步回本地后，在本地生成报告源码：
-
-```bash
-python3 task2/make_report.py \
-  --summary-json task2/report/summary.json \
-  --outdir task2/report \
-  --repo-url https://github.com/<your-username>/<your-repo>
-```
-
-9. 使用本地 `tectonic` 编译 PDF：
-
-```bash
-./tools/tectonic/tectonic -X compile task2/report/main.tex --outdir task2/report
-```
-
-## 单次实验命令
-
-```bash
-python task2/train.py \
-  --preset densenet121_finetune \
-  --data-root /content/drive/MyDrive/task2_pet/data \
-  --output-root /content/drive/MyDrive/task2_pet/runs \
-  --device cuda
-```
-
-烟雾测试：
-
-```bash
-python task2/run_all.py \
-  --data-root /content/drive/MyDrive/task2_pet/data \
-  --output-root /content/drive/MyDrive/task2_pet/runs_smoke \
+python -u run_all.py \
+  --data-root data \
+  --output-root runs \
   --device cuda \
-  --smoke-test
+  --num-workers 2
 ```
 
-## 输出约定
+汇总结果：
 
-每次运行产物目录固定为：
+```bash
+python summarize_runs.py \
+  --runs-root runs \
+  --report-dir report
+```
+
+生成报告源码：
+
+```bash
+python make_report.py \
+  --summary-json report/summary.json \
+  --outdir report \
+  --repo-url https://github.com/sidchy/math3705m-neural-networks-assignments
+```
+
+## 输出文件
+
+每次实验会生成：
 
 ```text
 runs/<model>_<mode>_<timestamp>/
 ```
 
-目录内至少包含：
+其中包含：
 
 - `history.csv`
 - `results.json`
@@ -104,8 +81,8 @@ runs/<model>_<mode>_<timestamp>/
 - `predictions_grid.png`
 - `top_confusions.png`
 
-## 注意事项
+## 说明
 
-- 若 Colab 免费 GPU 显存不足，优先把 `ResNeXt50_32x4d` 的 batch size 从 `48` 改到 `32`
-- `run_all.py` 会在总训练时长不足 `7200` 秒时，自动从 scratch checkpoint 继续追加训练
-- 正式提交 PDF 时不要附代码，只放仓库地址
+- 训练数据目录 `data/`、实验结果目录 `runs/` 和最终报告产物 `report/` 默认不提交到仓库
+- 若需要公开代码，只保留训练与汇总代码即可
+- 最终 PDF 提交到课程平台时只附仓库地址，不附代码正文

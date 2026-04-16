@@ -1,10 +1,17 @@
 __pycache__/
 *.pyc
+.DS_Store
 .ipynb_checkpoints/
 .mplconfig/
 data/
+smoke_runs/
 runs/
+full_run.log
+one_run.log
+report.log
+summarize.log
 report/figs/
+report/main.tex
 report/*.pdf
 report/*.aux
 report/*.log
@@ -12,4 +19,3 @@ report/*.out
 report/*.toc
 report/summary.json
 report/summary.csv
-
