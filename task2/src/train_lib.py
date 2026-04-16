@@ -243,6 +243,12 @@ def run_experiment(spec: ExperimentSpec, runtime: RuntimeOptions) -> Path:
         run_dir = _build_run_dir(output_root, spec)
         run_dir.mkdir(parents=True, exist_ok=True)
 
+    print(
+        f"[run] {spec.display_name} | device={device} | batch_size={spec.batch_size} | "
+        f"epochs={spec.epochs} | output={run_dir}",
+        flush=True,
+    )
+
     bundle = build_dataloaders(
         runtime.data_root,
         image_size=spec.image_size,
@@ -303,6 +309,11 @@ def run_experiment(spec: ExperimentSpec, runtime: RuntimeOptions) -> Path:
                 weight_decay=spec.weight_decay,
             )
 
+        print(
+            f"[epoch {epoch}/{spec.epochs}] {spec.display_name} | phase={phase} | "
+            f"lr_backbone={learning_rates(optimizer)[0]:.2e} | lr_head={learning_rates(optimizer)[-1]:.2e}",
+            flush=True,
+        )
         epoch_start = time.time()
         train_loss, train_acc = _train_one_epoch(model, bundle.train_loader, optimizer, criterion, device)
         val_metrics = _evaluate(model, bundle.val_loader, criterion, device)
@@ -348,6 +359,16 @@ def run_experiment(spec: ExperimentSpec, runtime: RuntimeOptions) -> Path:
             state["best_val_acc"] = best_val_acc
             state["best_epoch"] = best_epoch
             torch.save(state, run_dir / "best.pt")
+            best_tag = " | saved best.pt"
+        else:
+            best_tag = ""
+
+        print(
+            f"[epoch {epoch}/{spec.epochs}] done | train_loss={train_loss:.4f} | train_acc={train_acc:.4f} | "
+            f"val_loss={float(val_metrics['loss']):.4f} | val_acc={float(val_metrics['acc']):.4f} | "
+            f"seconds={epoch_seconds:.1f}{best_tag}",
+            flush=True,
+        )
 
     best_checkpoint = _safe_torch_load(run_dir / "best.pt", map_location="cpu")
     best_model = build_model(spec.model_name, spec.init_mode, num_classes=NUM_CLASSES)
@@ -402,6 +423,7 @@ def run_experiment(spec: ExperimentSpec, runtime: RuntimeOptions) -> Path:
         "generated_at": datetime.utcnow().isoformat() + "Z",
     }
     _write_json(results, run_dir / "results.json")
+    print(f"[done] {spec.display_name} | results={run_dir / 'results.json'}", flush=True)
     return run_dir
 
 
