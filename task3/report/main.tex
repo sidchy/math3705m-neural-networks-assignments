@@ -1,0 +1,142 @@
+\documentclass[UTF8,a4paper,twocolumn]{ctexart}
+
+\usepackage{geometry}
+\geometry{left=1.25cm,right=1.25cm,top=1.3cm,bottom=1.35cm,columnsep=0.42cm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{enumitem}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\textfloatsep}{5pt}
+\setlength{\floatsep}{4pt}
+\setlength{\intextsep}{4pt}
+\setlength{\parskip}{2pt}
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=1pt,parsep=0pt}
+
+\newcommand{\safeincludegraphics}[2]{%
+  \IfFileExists{#2}{\includegraphics[width=#1]{#2}}{%
+    \fbox{\parbox[c][0.26\textheight][c]{#1}{\centering Missing figure:\\\texttt{\detokenize{#2}}}}%
+  }%
+}
+
+\title{课程报告三：基于Pix2Pix条件生成对抗网络的灰度图像自动着色实践}
+\author{柴昊阳 22542013}
+\date{\today}
+
+\begin{document}
+\maketitle
+\small
+
+\section{研究目标}
+
+图像自动着色（colorization）是图像到图像翻译的经典任务：给定一张灰度图，生成合理且自然的彩色图。与传统的手工着色或基于图像检索的方法不同，本实验基于条件生成对抗网络（cGAN）框架，利用 Pix2Pix 架构在 Lab 色彩空间中学习从亮度通道到色度通道的映射。
+
+本次任务统一采用 COCO 2017 子集作为训练数据，基于 junyanz/pytorch-CycleGAN-and-pix2pix 官方实现进行训练与评估。实验设计了两个训练阶段（30 epoch 与 50 epoch），对比不同训练时长对着色质量的影响，并结合 MAE、PSNR、SSIM 量化指标进行分析。
+
+仓库地址：\url{https://github.com/sidchy/math3705m-neural-networks-assignments}
+
+\section{模型与数据集}
+
+\subsection{模型架构}
+
+本实验采用 Pix2Pix 标准架构。生成器为 U-Net 256，通过 encoder-decoder 结构和跳跃连接保留图像空间信息；判别器为 PatchGAN（basic），对 $70\times70$ 的图像块进行局部真假判别。损失函数由条件 GAN 对抗损失和 L1 重建损失加权组成：
+
+\[
+\mathcal{L} = \mathcal{L}_{\text{cGAN}}(G, D) + \lambda_{L1} \, \mathcal{L}_{L1}(G)
+\]
+
+其中 $\lambda_{L1} = 100$。模型在 Lab 色彩空间中工作：输入为单通道 L（亮度），输出为双通道 ab（色度）。ColorizationModel 继承自 Pix2PixModel，内置 Lab$\rightarrow$RGB 转换，训练过程中自动完成可视化。生成器参数量为 54.41M，判别器参数量为 2.77M。
+
+\subsection{数据集与预处理}
+
+实验使用 COCO 2017 val2017 子集，从中随机选取 2000 张自然图像（train: 1600, val: 200, test: 200）。预处理流程如下：
+\begin{itemize}
+\item 将每张原图以短边对齐的方式 resize 到 $256\times256$，然后中心裁剪。
+\item 保存为 PNG 格式（无损），按 train/val/test 分入对应目录。
+\item 训练时由 ColorizationDataset 内部完成 RGB$\rightarrow$Lab 转换，无需额外处理。
+\end{itemize}
+图像尺寸固定为 $256\times256$，训练时使用 \texttt{--preprocess none} 避免二次缩放。该设置既保证了训练效率，也保留了原始图像的比例信息。
+
+\section{实验设置}
+
+优化器使用 Adam（$\beta_1=0.5$），初始学习率 $2\times10^{-4}$，采用线性衰减策略。由于图像尺寸较小且 batch size 为 1，单张 T4 GPU（16GB 显存）即可完成全部训练。实验分两个阶段：
+
+\begin{itemize}
+\item Stage 1：20 epoch 恒定学习率 + 10 epoch 线性衰减（共 30 epoch）。
+\item Stage 2：30 epoch 恒定学习率 + 20 epoch 线性衰减（共 50 epoch）。
+\end{itemize}
+
+两组实验使用相同的数据划分和随机种子，仅在训练轮数上存在差异。Stage 1 训练耗时约 47 min，Stage 2 约 83 min，均在 T4 GPU 上完成。评估指标选取 MAE（L1 损失）、PSNR 和 SSIM，对 fake\_B 与 real\_B 在 RGB 域上逐像素计算。
+
+\section{结果分析}
+
+\begin{table}[!ht]
+\centering
+\scriptsize
+\begin{tabular}{lrrr}
+\toprule
+Stage & MAE & PSNR (dB) & SSIM \\
+\midrule
+Stage 1 (30 epoch) & 0.062 & 21.51 & 0.881 \\
+Stage 2 (50 epoch) & 0.062 & 21.50 & 0.875 \\
+\bottomrule
+\end{tabular}
+\caption{两组实验在 200 张测试图像上的平均指标。}
+\end{table}
+
+从量化指标看，两项设置均达到了可用的着色效果。Stage 1 在 SSIM 上略优于 Stage 2（0.881 vs.\ 0.875），PSNR 基本持平（21.51 vs.\ 21.50 dB），MAE 相当。这一结果表明：在当前数据规模下，30 epoch 已基本收敛，额外增加 20 epoch（Stage 2）并未带来性能提升，反而出现了轻微的过拟合迹象。
+
+\begin{figure}[!ht]
+\centering
+\safeincludegraphics{0.96\columnwidth}{figs/comparison_grid.png}
+\caption{测试集着色结果对比。自上而下三行分别为：灰度输入（real\_A）、模型生成彩色图（fake\_B）、真实彩色图（real\_B）。}
+\end{figure}
+
+从可视化结果可以看到，模型对天空（蓝色）、草地（绿色）、建筑（灰色调）等大面积语义区域的上色较为准确；但在复杂纹理（如衣物花纹）和细节边缘处，生成的色彩偏保守，倾向于使用平均色调。这是灰度着色任务的一对多映射固有问题：同一张灰度图可能对应多种合理的着色方案，而 L1 损失倾向于回归到颜色分布的均值，导致颜色饱和度偏低。
+
+\begin{figure}[!ht]
+\centering
+\safeincludegraphics{0.96\columnwidth}{figs/example_1.png}
+\caption{单张着色样例：左为灰度输入，中为生成结果，右为真实彩色图。}
+\end{figure}
+
+\begin{figure}[!ht]
+\centering
+\safeincludegraphics{0.96\columnwidth}{figs/example_2.png}
+\caption{另一张测试样例，展示了模型在室内场景上的着色效果。}
+\end{figure}
+
+\subsection{训练时长与着色质量的非单调关系}
+
+值得关注的是，Stage 2 虽然训练轮数更多，但 SSIM 反而从 0.881 下降到 0.875。这并不是异常，而是在小样本条件下 GAN 训练的常见现象：
+
+\begin{itemize}
+\item 判别器在有限数据上逐渐过拟合，为生成器提供的梯度信号质量下降。
+\item 生成器在 L1 损失的驱动下继续逼近训练集颜色分布，但泛化能力开始退化。
+\item 进一步延长训练可能导致模式坍塌或颜色饱和度进一步下降。
+\end{itemize}
+
+这一发现对课程作业有直接启示：在小数据量下，GAN 并非训练越久越好，合适的早停时机往往比堆叠训练轮数更有效。
+
+\section{结论}
+
+本实验基于 Pix2Pix 条件生成对抗网络，在 COCO 2017 子集上完成了灰度图像的自动着色任务。实验结果表明：
+
+\begin{itemize}
+\item 在 1600 张训练图像的规模下，Pix2Pix + Lab 色彩空间的方案能产生结构保持良好（SSIM $>$ 0.87）、色彩基本合理的着色结果。
+\item Stage 1（30 epoch）在各项指标上已达到当前数据规模下的较优水平，进一步训练至 50 epoch（Stage 2）未带来性能增益，反而出现轻微过拟合。
+\item 灰度着色作为一对多映射问题，L1 损失本质上倾向于回归均值颜色，导致生成结果饱和度偏低——这并非模型缺陷，而是该任务的内在挑战。
+\end{itemize}
+
+从工程角度看，本实验的核心经验是：基于成熟的开源实现（官方 Pix2Pix 仓库），配合针对任务定制的数据预处理和简洁的训练策略，可以在有限算力（T4 单卡）和有限时间（24 小时内）内完成一个完整的生成模型实验。
+
+\section{参考文献}
+[1] Isola P, Zhu J Y, Zhou T, et al. Image-to-Image Translation with Conditional Adversarial Networks. CVPR, 2017.\par
+[2] Zhu J Y, Park T, Isola P, et al. Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks. ICCV, 2017.\par
+[3] Zhang R, Isola P, Efros A A. Colorful Image Colorization. ECCV, 2016.\par
+[4] Ronneberger O, Fischer P, Brox T. U-Net: Convolutional Networks for Biomedical Image Segmentation. MICCAI, 2015.
+
+\end{document}
