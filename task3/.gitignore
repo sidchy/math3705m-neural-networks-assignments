@@ -44,3 +44,11 @@ test/data/legacy_serialized.pt
 
 #Ignore Wandb
 wandb/
+coco/
+*.pth
+*.log
+*.zip
+coco/
+*.pth
+*.log
+*.zip

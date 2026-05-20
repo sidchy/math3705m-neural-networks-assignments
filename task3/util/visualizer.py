@@ -4,7 +4,10 @@ import ntpath
 import time
 from . import util, html
 from pathlib import Path
-import wandb
+try:
+    import wandb
+except ImportError:
+    wandb = None
 import os
 import torch.distributed as dist
 
