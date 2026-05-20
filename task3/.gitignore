@@ -52,4 +52,5 @@ coco/
 *.pth
 *.log
 *.zip
+report/main.pdf
 !task3/report/figures/*.png
