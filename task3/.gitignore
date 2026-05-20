@@ -48,9 +48,5 @@ coco/
 *.pth
 *.log
 *.zip
-coco/
-*.pth
-*.log
-*.zip
 report/main.pdf
-!task3/report/figures/*.png
+!report/figures/*.png
