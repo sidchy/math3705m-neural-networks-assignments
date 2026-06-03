@@ -37,6 +37,9 @@ def plot_lm_loss(metrics_path: Path, out_path: Path):
     with open(metrics_path) as f:
         metrics = json.load(f)
 
+    if isinstance(metrics, dict):
+        metrics = metrics["epochs"]
+
     epochs = [m["epoch"] for m in metrics]
     train_loss = [m["train_loss"] for m in metrics]
     val_loss = [m["val_loss"] for m in metrics]

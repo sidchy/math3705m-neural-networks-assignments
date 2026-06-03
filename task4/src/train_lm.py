@@ -186,7 +186,7 @@ def train(
             }
             torch.save(checkpoint, out_dir / "checkpoint.pt")
 
-    # Save final artifacts
+    # Save per-epoch metrics first
     with open(out_dir / "metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
@@ -195,7 +195,12 @@ def train(
 
     vocab.save(out_dir / "vocab.json")
 
-    # Generate samples
+    # Load best checkpoint for final evaluation and generation
+    checkpoint = torch.load(out_dir / "checkpoint.pt", map_location=device, weights_only=True)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+
+    # Generate samples from best checkpoint
     prompts = ["今有田廣", "荅曰", "方田術曰", "句股"]
     samples = generate_samples(
         model, vocab, prompts, max_new_tokens=80, temperature=0.8, top_k=40
@@ -203,14 +208,12 @@ def train(
     save_samples(samples, out_dir / "samples.txt", out_dir / "samples.json")
 
     # Evaluate on test set with the best checkpoint
-    checkpoint = torch.load(out_dir / "checkpoint.pt", map_location=device, weights_only=True)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.to(device)
     test_result = evaluate_model(model, torch.tensor(test_data, dtype=torch.long), vocab.pad_id)
     test_metrics = {
         "test_loss": round(test_result["loss"], 6),
         "test_perplexity": round(test_result["perplexity"], 4),
     }
+    # Rewrite metrics.json with test results
     with open(out_dir / "metrics.json", "w") as f:
         json.dump({"epochs": metrics, "test": test_metrics}, f, indent=2)
 
