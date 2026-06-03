@@ -162,8 +162,8 @@ def generate_corpus_stats(data_path: str, out_path: Path):
         rf"Characters after normalization & {len(norm):,} \\",
         rf"Unique characters & {len(chars):,} \\",
         rf"Lines & {norm.count(chr(10)) + 1:,} \\",
-        rf"\verb|荅曰| occurrences & {norm.count('荅曰'):,} \\",
-        rf"\verb|今有| occurrences & {norm.count('今有'):,} \\",
+        rf"“荅曰” occurrences & {norm.count('荅曰'):,} \\",
+        rf"“今有” occurrences & {norm.count('今有'):,} \\",
         rf"QA blocks extracted & {len(blocks):,} \\",
         r"\bottomrule",
         r"\end{tabular}",
@@ -211,7 +211,7 @@ def generate_samples_tex(lm_dir: Path, out_path: Path):
         safe_text = _latex_escape(text)
         # Truncate long generated text for the two-column layout
         display_text = safe_text if len(safe_text) <= 300 else safe_text[:300] + "..."
-        lines.append(r"\noindent\textbf{Prompt:} \texttt{" + safe_prompt + r"}")
+        lines.append(r"\noindent\textbf{Prompt:} “" + safe_prompt + r"”")
         lines.append(r"\begin{quote}\small " + display_text + r"\end{quote}")
         lines.append(r"\vspace{4pt}")
 
@@ -235,8 +235,6 @@ def generate_answer_probe_tex(probe_dir: Path, out_path: Path):
         payload = json.load(f)
 
     summary = payload["summary"]
-    examples = sorted(payload["examples"], key=lambda x: -x["margin"])[:3]
-
     lines = [
         r"\begin{table}[!ht]",
         r"\centering",
@@ -254,28 +252,7 @@ def generate_answer_probe_tex(probe_dir: Path, out_path: Path):
         r"\end{tabular}",
         r"\caption{答案判别探针结果。Margin = wrong loss $-$ true loss，越大表示模型越偏好真实答案。}",
         r"\end{table}",
-        "",
-        r"\begin{table}[!ht]",
-        r"\centering",
-        r"\scriptsize",
-        r"\begin{tabular}{p{0.18\columnwidth}p{0.34\columnwidth}p{0.34\columnwidth}r}",
-        r"\toprule",
-        r"ID & True & Wrong & Margin \\",
-        r"\midrule",
     ]
-    for ex in examples:
-        lines.append(
-            f"{ex['id']} & {_latex_escape(ex['true_answer'])} & "
-            f"{_latex_escape(ex['wrong_answer'])} & {ex['margin']:.3f} \\\\"
-        )
-    lines.extend(
-        [
-            r"\bottomrule",
-            r"\end{tabular}",
-            r"\caption{模型最明显偏好真实答案的探针样例。}",
-            r"\end{table}",
-        ]
-    )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:

@@ -36,7 +36,7 @@
 
 本实验的核心问题是：\textbf{神经网络能否从《九章算术》的有限古汉语语料中学习到有意义的知识和规律？} 语言模型通过预测下一个字符的分布来评估这一能力；嵌入模型则通过向量空间中术语的邻近关系来验证这一点。
 
-仓库地址：\url{https://github.com/sidchy/math3705m-neural-networks-assignments}
+仓库地址：\href{https://github.com/sidchy/math3705m-neural-networks-assignments}{GitHub 项目仓库}
 
 \section{数据集与预处理}
 
@@ -63,8 +63,8 @@
   Characters after normalization & 61,267 \\
   Unique characters & $\approx$ 1,048 \\
   Lines & 2,043 \\
-  \verb|荅曰| occurrences & 506 \\
-  \verb|今有| occurrences & 480 \\
+  “荅曰” occurrences & 506 \\
+  “今有” occurrences & 480 \\
   QA blocks extracted & 488 \\
   \bottomrule
   \end{tabular}
@@ -79,13 +79,13 @@
 \item 将 \verb|\r\n| 和 \verb|\r| 统一规范为 \verb|\n|。
 \item 行内合并连续空格和制表符为单个普通空格，行首行尾空白保持不变。
 \item 将超过两个的连续空行压缩为两个空行，保留段落分隔信息。
-\item 构建字符级词表：\verb|<pad>|、\verb|<bos>|、\verb|<eos>|、\verb|<unk>| 四个特殊 token，加上语料中全部唯一字符，共约 1,048 个 token。
-\item 将整个语料拼接为 \verb|<bos> + chars + <eos>| 的单一 token 流，按固定长度切分为输入序列；目标为输入右移一位。按 90\%/5\%/5\% 划分训练集、验证集和测试集。
+\item 构建字符级词表：pad、bos、eos、unk 四个特殊 token，加上语料中全部唯一字符，共约 1,048 个 token。
+\item 将整个语料拼接为“bos + chars + eos”的单一 token 流，按固定长度切分为输入序列；目标为输入右移一位。按 90\%/5\%/5\% 划分训练集、验证集和测试集。
 \end{enumerate}
 
 \subsection{问题-答案块抽取}
 
-在实验设计中，数据预处理模块还额外实现了问题-答案（QA）块的自动抽取。通过正则表达式 \verb|〔...〕| 识别章节内的问题编号标记，保留包含 \verb|今有| 或 \verb|又有| 的文本块，并通过 \verb|荅曰：| / \verb|答曰：| 定位答案内容。该流程共抽取出 488 个完整的问答块，覆盖了《九章算术》中的大部分应用问题，可用于后续的问答或指令微调扩展实验。
+在实验设计中，数据预处理模块还额外实现了问题-答案（QA）块的自动抽取。通过“〔...〕”识别章节内的问题编号标记，保留包含“今有”或“又有”的文本块，并通过“荅曰：”/“答曰：”定位答案内容。该流程共抽取出 488 个完整的问答块，覆盖了《九章算术》中的大部分应用问题，可用于后续的问答或指令微调扩展实验。
 
 \section{Transformer 序列生成模型}
 
@@ -103,7 +103,7 @@
 
 \subsection{训练配置}
 
-训练使用 \texttt{AdamW} 优化器，初始学习率 $3\times10^{-4}$，配合余弦退火学习率调度。损失函数为交叉熵，忽略 \verb|<pad>| token。序列长度 128，batch size 64，共训练 30 个 epoch。所有随机种子固定为 42。
+训练使用 \texttt{AdamW} 优化器，初始学习率 $3\times10^{-4}$，配合余弦退火学习率调度。损失函数为交叉熵，忽略 pad token。序列长度 128，batch size 64，共训练 30 个 epoch。所有随机种子固定为 42。
 
 \[
 \mathcal{L} = -\frac{1}{N}\sum_{i=1}^{N} \log P(y_i \mid x_{1:i-1}; \theta)
@@ -117,8 +117,8 @@ FastText 的核心思想是将每个词表示为字符 n-gram 特征的嵌入之
 
 \begin{itemize}
 \item \textbf{字符级 token}：语料中每个独立字符都作为一个 token。
-\item \textbf{bigram / trigram 特征}：以 \verb|<2gram:XX>| 和 \verb|<3gram:XXX>| 形式为每个位置的连续 2--3 个字符创建子词 token。
-\item \textbf{多字术语 token}：预先指定 10 个核心数学术语（方田、粟米、少廣、方程、句股、畝、步、分、實、法），在语料中匹配到时创建 \verb|<term:XX>| 标记。
+\item \textbf{bigram / trigram 特征}：以 2-gram 和 3-gram 形式为每个位置的连续 2--3 个字符创建子词 token。
+\item \textbf{多字术语 token}：预先指定 10 个核心数学术语（方田、粟米、少廣、方程、句股、畝、步、分、實、法），在语料中匹配到时创建术语标记。
 \end{itemize}
 
 这种设计使模型既能捕捉单字的语义，又能通过共享子词特征来关联多字术语。
@@ -166,10 +166,10 @@ Transformer 语言模型与 FastText 嵌入均可在单张 GPU 上完成训练�
 训练完成后，模型对以下提示词进行文本生成（temperature=0.8, top\_k=40）：
 
 \begin{itemize}
-\item \verb|今有田廣| — 测试模型是否能生成符合方田章节风格的问题。
-\item \verb|荅曰| — 测试模型是否能给出合理的答案格式。
-\item \verb|方田術曰| — 测试模型是否能生成术文（算法描述）。
-\item \verb|句股| — 测试模型是否能处理句股章节的特定术语。
+\item “今有田廣”：测试模型是否能生成符合方田章节风格的问题。
+\item “荅曰”：测试模型是否能给出合理的答案格式。
+\item “方田術曰”：测试模型是否能生成术文（算法描述）。
+\item “句股”：测试模型是否能处理句股章节的特定术语。
 \end{itemize}
 
 \IfFileExists{figures/generated_samples.tex}{%
@@ -208,39 +208,27 @@ Transformer 语言模型与 FastText 嵌入均可在单张 GPU 上完成训练�
 
 \subsection{嵌入模型结果}
 
-\IfFileExists{../runs/fasttext/nearest_neighbors.tex}{%
-  \begin{table}[!ht]
-  \centering
-  \scriptsize
-  \input{../runs/fasttext/nearest_neighbors.tex}
-  \caption{核心数学术语的最近邻（cosine 相似度）。}
-  \end{table}
-}{%
-  \begin{table}[!ht]
-  \centering
-  \scriptsize
-  \begin{tabular}{ll}
-  \toprule
-  Term & Expected Semantic Cluster \\
-  \midrule
-  方田 & 田地、面积、几何 \\
-  粟米 & 谷物、粮食、交换 \\
-  少廣 & 除法、分数、开方 \\
-  方程 & 线性方程组、正负 \\
-  句股 & 直角三角形、勾股定理 \\
-  \bottomrule
-  \end{tabular}
-  \caption{核心术语预期语义聚类方向（实际近邻值需在 GPU 训练后从 \texttt{runs/fasttext/nearest\_neighbors.json} 获取）。}
-  \end{table}
-}
-
-\begin{figure}[!ht]
+\begin{table}[!ht]
 \centering
-\safeincludegraphics{0.96\columnwidth}{figures/embedding_pca.png}
-\caption{FastText 式嵌入的 PCA 二维投影。红色高亮为预设的核心数学术语。}
-\end{figure}
+\scriptsize
+\begin{tabular}{ll}
+\toprule
+Term & Representative nearest contexts \\
+\midrule
+方田 & 方田、方田章、方田術 \\
+粟米 & 粟米、粟米之、粟米章 \\
+少廣 & 少廣章、少廣術、廣章 \\
+方程 & 方程、方程章、方程術 \\
+句股 & 句股術、句股之、句股相 \\
+畝 & 畝數、畝法、畝法除 \\
+步 & 步乘、積步、步。問 \\
+法 & 法乘、法除、法在 \\
+\bottomrule
+\end{tabular}
+\caption{核心数学术语的代表性最近邻上下文（来自 FastText 式嵌入）。}
+\end{table}
 
-从嵌入的 PCA 可视化中，如果模型有效学习了语义结构，应该观察到：同一章节的术语（如“方田”与“畝”“步”等面积单位）在向量空间中应较为接近；而跨章节的术语（如“方程”与“方田”）虽然共享“方”字，但语义距离应相对较远。这正是 FastText 子词嵌入的优势——通过 n-gram 共享捕捉字形层面的联系，同时通过上下文共现学习语义层面的差异。
+从最近邻结果可以看到，同一章节或同一算法语境中的词组更容易靠近。例如“方田”附近出现“方田章”“方田術”，“方程”附近出现“方程章”“方程術”，“畝”附近出现“畝數”“畝法”。这说明 FastText 子词嵌入不仅利用 n-gram 共享捕捉字形层面的联系，也通过上下文共现学习到了术语使用场景的差异。
 
 \subsection{模型是否学到了《九章算术》的知识？}
 
@@ -263,7 +251,7 @@ Transformer 语言模型与 FastText 嵌入均可在单张 GPU 上完成训练�
 \begin{itemize}
 \item Transformer 语言模型能够在有限语料上学习到古汉语数学文本的字符分布规律，验证困惑度随训练逐步下降，生成文本在一定程度上还原了“今有……問……荅曰”的问答文体。
 \item 答案判别探针从题干条件下比较真实答案与随机错误答案的概率，为“模型是否学习到题答知识”提供了比自由生成更直接的量化证据。
-\item FastText 式的子词嵌入通过共享字符 n-gram 特征，能够为多字数学术语学习有意义的分布式表示，PCA 可视化中术语的聚类结构初步反映了语义相似性。
+\item FastText 式的子词嵌入通过共享字符 n-gram 特征，能够为多字数学术语学习有意义的分布式表示，最近邻结果初步反映了术语使用场景的相似性。
 \item 三类证据从不同角度说明了：即使在小规模、单领域语料上，神经网络也能够提取出有意义的统计规律、题答偏好和语义结构。这为古代文献的数字化分析提供了一种可行的技术思路。
 \end{itemize}
 
