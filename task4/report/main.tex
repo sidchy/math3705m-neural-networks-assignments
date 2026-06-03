@@ -172,7 +172,18 @@ Transformer 语言模型训练约需 1--2 小时（单张 T4），FastText 嵌�
 \item \verb|句股| — 测试模型是否能处理句股章节的特定术语。
 \end{itemize}
 
-生成的文本在 \texttt{runs/transformer/samples.txt} 中。从生成结果可以观察到：模型在有限语料（约 61K 字符）上确实学到了《九章算术》的词汇分布和句法模式，但受限于训练数据量，长序列生成中仍会出现语义不连贯或循环重复的问题。
+\IfFileExists{figures/generated_samples.tex}{%
+  \input{figures/generated_samples.tex}
+}{%
+  \fbox{\parbox{0.96\columnwidth}{\centering\small
+    生成样例尚未就绪。\\
+    请在云端 GPU 训练完成后运行：\\
+    \texttt{python src/generate\_report\_assets.py --lm runs/transformer
+    --embed runs/fasttext --out report/figures}
+  }}
+}
+
+生成结果可以观察到：模型在有限语料（约 61K 字符）上确实学到了《九章算术》的词汇分布和句法模式，但受限于训练数据量，长序列生成中仍会出现语义不连贯或循环重复的问题。
 
 \subsection{嵌入模型结果}
 

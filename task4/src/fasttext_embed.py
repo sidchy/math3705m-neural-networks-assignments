@@ -228,11 +228,15 @@ def compute_nearest_neighbors(
     results: Dict[str, List[Tuple[str, float]]] = {}
 
     for term in query_terms:
-        if term not in token_to_id:
+        # Multi-char terms are stored as <term:X> tokens; also try plain char fallback.
+        lookup = f"<term:{term}>"
+        if lookup in token_to_id:
+            tid = token_to_id[lookup]
+        elif term in token_to_id:
+            tid = token_to_id[term]
+        else:
             results[term] = []
             continue
-
-        tid = token_to_id[term]
         vec = embeddings[tid]
         sims = np.dot(embeddings, vec)  # cosine similarity
 
@@ -325,7 +329,25 @@ def main():
     with open(out_dir / "nearest_neighbors.json", "w", encoding="utf-8") as f:
         json.dump(neighbors, f, ensure_ascii=False, indent=2)
 
-    # LaTeX table
+    # LaTeX table — clean neighbour tokens for safe LaTeX output
+    def _latex_escape(s: str) -> str:
+        for char, repl in [
+            ("\\", r"\textbackslash "),
+            ("&", r"\&"),
+            ("%", r"\%"),
+            ("$", r"\$"),
+            ("#", r"\#"),
+            ("_", r"\_"),
+            ("{", r"\{"),
+            ("}", r"\}"),
+            ("~", r"\textasciitilde "),
+            ("^", r"\textasciicircum "),
+        ]:
+            s = s.replace(char, repl)
+        # Drop ngram/term markup brackets that confuse LaTeX
+        s = s.replace("<", "").replace(">", "")
+        return s
+
     latex_lines = [
         r"\begin{tabular}{lll}",
         r"\toprule",
@@ -334,10 +356,11 @@ def main():
     ]
     for term in query_terms:
         nbrs = neighbors.get(term, [])
-        nbr_str = "; ".join(
-            f"{t} ({s:.3f})" for t, s in nbrs[:5]
-        )
-        nbr_str = nbr_str.replace("_", r"\_").replace("&", r"\&")
+        nbr_parts = []
+        for t, s in nbrs[:5]:
+            clean_t = _latex_escape(t)
+            nbr_parts.append(f"{clean_t} ({s:.3f})")
+        nbr_str = "; ".join(nbr_parts) if nbr_parts else "---"
         latex_lines.append(f"{term} & {nbr_str} \\\\")
     latex_lines.append(r"\bottomrule")
     latex_lines.append(r"\end{tabular}")

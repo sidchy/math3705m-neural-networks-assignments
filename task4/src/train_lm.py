@@ -128,6 +128,7 @@ def train(
     model: nn.Module,
     train_data: np.ndarray,
     val_data: np.ndarray,
+    test_data: np.ndarray,
     vocab: CharVocab,
     config: dict,
     out_dir: Path,
@@ -201,8 +202,21 @@ def train(
     )
     save_samples(samples, out_dir / "samples.txt", out_dir / "samples.json")
 
+    # Evaluate on test set with the best checkpoint
+    checkpoint = torch.load(out_dir / "checkpoint.pt", map_location=device, weights_only=True)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+    test_result = evaluate_model(model, torch.tensor(test_data, dtype=torch.long), vocab.pad_id)
+    test_metrics = {
+        "test_loss": round(test_result["loss"], 6),
+        "test_perplexity": round(test_result["perplexity"], 4),
+    }
+    with open(out_dir / "metrics.json", "w") as f:
+        json.dump({"epochs": metrics, "test": test_metrics}, f, indent=2)
+
     print(f"\nSaved outputs to {out_dir}")
     print(f"Best val loss: {best_val_loss:.4f}")
+    print(f"Test loss: {test_metrics['test_loss']:.4f}  |  Test perplexity: {test_metrics['test_perplexity']:.2f}")
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -252,7 +266,7 @@ def main():
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    train(model, train_data, val_data, vocab, preset, out_dir)
+    train(model, train_data, val_data, test_data, vocab, preset, out_dir)
 
 
 if __name__ == "__main__":

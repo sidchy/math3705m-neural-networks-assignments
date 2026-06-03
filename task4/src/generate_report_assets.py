@@ -101,20 +101,25 @@ def plot_embedding_pca(
     fig, ax = plt.subplots(figsize=(10, 8))
     ax.scatter(coords[:, 0], coords[:, 1], s=1, alpha=0.3, c="gray")
 
-    # Highlight target terms
+    # Highlight target terms — use <term:X> lookup first, then plain char fallback
     for term in highlight_terms:
-        if term in token_to_id:
+        lookup = f"<term:{term}>"
+        if lookup in token_to_id:
+            tid = token_to_id[lookup]
+        elif term in token_to_id:
             tid = token_to_id[term]
-            x, y = coords[tid]
-            ax.scatter(x, y, s=60, c="red", edgecolors="darkred", linewidth=0.5, zorder=5)
-            ax.annotate(
-                term,
-                (x, y),
-                fontsize=9,
-                xytext=(5, 5),
-                textcoords="offset points",
-                bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7),
-            )
+        else:
+            continue
+        x, y = coords[tid]
+        ax.scatter(x, y, s=60, c="red", edgecolors="darkred", linewidth=0.5, zorder=5)
+        ax.annotate(
+            term,
+            (x, y),
+            fontsize=9,
+            xytext=(5, 5),
+            textcoords="offset points",
+            bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.7),
+        )
 
     ax.set_title(
         f"PCA of FastText-style Embeddings\n"
@@ -168,6 +173,52 @@ def generate_corpus_stats(data_path: str, out_path: Path):
 
 
 # ──────────────────────────────────────────────────────────────────────
+# 4. Generated samples LaTeX snippet
+# ──────────────────────────────────────────────────────────────────────
+
+
+def _latex_escape(s: str) -> str:
+    for char, repl in [
+        ("\\", r"\textbackslash "),
+        ("&", r"\&"),
+        ("%", r"\%"),
+        ("$", r"\$"),
+        ("#", r"\#"),
+        ("_", r"\_"),
+        ("{", r"\{"),
+        ("}", r"\}"),
+        ("~", r"\textasciitilde "),
+        ("^", r"\textasciicircum "),
+    ]:
+        s = s.replace(char, repl)
+    return s
+
+
+def generate_samples_tex(lm_dir: Path, out_path: Path):
+    """Read samples.json and write a small LaTeX snippet of generated text."""
+    samples_path = lm_dir / "samples.json"
+    _require(samples_path, "LM samples.json")
+
+    with open(samples_path, encoding="utf-8") as f:
+        samples = json.load(f)
+
+    lines: List[str] = []
+    for prompt, text in samples.items():
+        safe_prompt = _latex_escape(prompt)
+        safe_text = _latex_escape(text)
+        # Truncate long generated text for the two-column layout
+        display_text = safe_text if len(safe_text) <= 300 else safe_text[:300] + "..."
+        lines.append(r"\noindent\textbf{Prompt:} \texttt{" + safe_prompt + r"}")
+        lines.append(r"\begin{quote}\small " + display_text + r"\end{quote}")
+        lines.append(r"\vspace{4pt}")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"Saved generated samples → {out_path}")
+
+
+# ──────────────────────────────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────────────────────────────
 
@@ -202,6 +253,12 @@ def main():
         )
     except SystemExit:
         print("(Skipping PCA plot — embeddings not found)")
+
+    # Generated samples
+    try:
+        generate_samples_tex(lm_dir, out_dir / "generated_samples.tex")
+    except SystemExit:
+        print("(Skipping generated samples — samples.json not found)")
 
     # Corpus stats
     generate_corpus_stats(args.data, out_dir / "corpus_stats.tex")
