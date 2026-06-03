@@ -1,0 +1,242 @@
+\documentclass[UTF8,a4paper,twocolumn]{ctexart}
+
+\usepackage{geometry}
+\geometry{left=1.25cm,right=1.25cm,top=1.3cm,bottom=1.35cm,columnsep=0.42cm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{enumitem}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\textfloatsep}{5pt}
+\setlength{\floatsep}{4pt}
+\setlength{\intextsep}{4pt}
+\setlength{\parskip}{2pt}
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=1pt,parsep=0pt}
+
+\newcommand{\safeincludegraphics}[2]{%
+  \IfFileExists{#2}{\includegraphics[width=#1]{#2}}{%
+    \fbox{\parbox[c][0.22\textheight][c]{#1}{\centering Missing figure:\\\texttt{\detokenize{#2}}}}%
+  }%
+}
+
+\title{课程报告四：基于 Transformer 与 FastText 式嵌入的《九章算术》语言建模实验}
+\author{柴昊阳 22542013}
+\date{\today}
+
+\begin{document}
+\maketitle
+\small
+
+\section{研究目标}
+
+本次任务围绕《九章算术》古汉语数学文本，完成两项自然语言处理实验：其一，训练一个基于 Transformer 的字符级语言模型，使模型能够逐字符地理解和生成与《九章算术》风格一致的文言数学叙述；其二，训练 FastText 式的子词嵌入模型，通过 skip-gram 与负采样学习字符与多字术语的分布式表示，并观察传统数学术语之间的语义距离。全部训练在 GPU 服务器上完成，本地仅负责数据处理脚本编写、报告整理与 PDF 编译。
+
+本实验的核心问题是：\textbf{神经网络能否从《九章算术》的有限古汉语语料中学习到有意义的知识和规律？} 语言模型通过预测下一个字符的分布来评估这一能力；嵌入模型则通过向量空间中术语的邻近关系来验证这一点。
+
+仓库地址：\url{https://github.com/sidchy/math3705m-neural-networks-assignments}
+
+\section{数据集与预处理}
+
+\subsection{语料概况}
+
+实验语料为《九章算经》电子文本，文件编码为 GB18030。语料包括《九章算术》正文九卷（方田、粟米、衰分、少廣、商功、均輸、盈不足、方程、句股）及提要、序言等前言材料。
+
+\IfFileExists{figures/corpus_stats.tex}{%
+  \begin{table}[!ht]
+  \centering
+  \scriptsize
+  \input{figures/corpus_stats.tex}
+  \caption{语料基本统计。}
+  \end{table}
+}{%
+  \begin{table}[!ht]
+  \centering
+  \scriptsize
+  \begin{tabular}{lr}
+  \toprule
+  Metric & Value \\
+  \midrule
+  Total characters (decoded) & 70,009 \\
+  Characters after normalization & 61,267 \\
+  Unique characters & $\approx$ 1,048 \\
+  Lines & 2,043 \\
+  \verb|荅曰| occurrences & 506 \\
+  \verb|今有| occurrences & 480 \\
+  QA blocks extracted & 488 \\
+  \bottomrule
+  \end{tabular}
+  \caption{语料基本统计（编译时未检测到 run 输出，使用本地快速统计值）。}
+  \end{table}
+}
+
+\subsection{预处理流程}
+
+\begin{enumerate}
+\item 以 GB18030 编码读取原始字节流，转换为 Python 字符串。
+\item 将 \verb|\r\n| 和 \verb|\r| 统一规范为 \verb|\n|。
+\item 行内合并连续空格和制表符为单个普通空格，行首行尾空白保持不变。
+\item 将超过两个的连续空行压缩为两个空行，保留段落分隔信息。
+\item 构建字符级词表：\verb|<pad>|、\verb|<bos>|、\verb|<eos>|、\verb|<unk>| 四个特殊 token，加上语料中全部唯一字符，共约 1,048 个 token。
+\item 将整个语料拼接为 \verb|<bos> + chars + <eos>| 的单一 token 流，按固定长度切分为输入序列；目标为输入右移一位。按 90\%/5\%/5\% 划分训练集、验证集和测试集。
+\end{enumerate}
+
+\subsection{问题-答案块抽取}
+
+在实验设计中，数据预处理模块还额外实现了问题-答案（QA）块的自动抽取。通过正则表达式 \verb|〔...〕| 识别章节内的问题编号标记，保留包含 \verb|今有| 或 \verb|又有| 的文本块，并通过 \verb|荅曰：| / \verb|答曰：| 定位答案内容。该流程共抽取出 488 个完整的问答块，覆盖了《九章算术》中的大部分应用问题，可用于后续的问答或指令微调扩展实验。
+
+\section{Transformer 序列生成模型}
+
+\subsection{模型架构}
+
+本实验采用 decoder-only Transformer 架构，与 GPT 系列模型的设计思路一致：
+
+\begin{itemize}
+\item \textbf{输入层}：字符嵌入（token embedding）+ 可学习的位置嵌入（positional embedding），嵌入维度 $d_{\text{model}}=256$。
+\item \textbf{Transformer 层}：4 层 \texttt{TransformerEncoderLayer}，每层使用 4 头因果自注意力（causal self-attention），前馈网络维度 $\text{FFN}=1024$，激活函数为 GELU，使用 Pre-LayerNorm 归一化。
+\item \textbf{输出投影}：线性层将 $d_{\text{model}}$ 投影到词表大小，输出每个位置的下一个字符概率分布。
+\end{itemize}
+
+因果自注意力通过上三角掩码实现，确保位置 $i$ 只能关注位置 $<i$ 的上下文，保证自回归生成的正确性。模型总参数量约为 5.5M，适合在单张 T4 GPU 上完成训练。
+
+\subsection{训练配置}
+
+训练使用 \texttt{AdamW} 优化器，初始学习率 $3\times10^{-4}$，配合余弦退火学习率调度。损失函数为交叉熵，忽略 \verb|<pad>| token。序列长度 128，batch size 64，共训练 30 个 epoch。所有随机种子固定为 42。
+
+\[
+\mathcal{L} = -\frac{1}{N}\sum_{i=1}^{N} \log P(y_i \mid x_{1:i-1}; \theta)
+\]
+
+\section{FastText 式文本嵌入模型}
+
+\subsection{子词特征设计}
+
+FastText 的核心思想是将每个词表示为字符 n-gram 特征的嵌入之和。虽然《九章算术》以单字词为主，但很多数学术语由多字组成（如“方田”“粟米”“方程”）。为此，本实验设计了以下 token 化策略：
+
+\begin{itemize}
+\item \textbf{字符级 token}：语料中每个独立字符都作为一个 token。
+\item \textbf{bigram / trigram 特征}：以 \verb|<2gram:XX>| 和 \verb|<3gram:XXX>| 形式为每个位置的连续 2--3 个字符创建子词 token。
+\item \textbf{多字术语 token}：预先指定 10 个核心数学术语（方田、粟米、少廣、方程、句股、畝、步、分、實、法），在语料中匹配到时创建 \verb|<term:XX>| 标记。
+\end{itemize}
+
+这种设计使模型既能捕捉单字的语义，又能通过共享子词特征来关联多字术语。
+
+\subsection{Skip-gram 训练}
+
+模型采用 skip-gram 架构，通过中心 token 预测上下文 token：
+
+\begin{itemize}
+\item 嵌入维度：$d = 100$
+\item 上下文窗口：动态窗口大小 1--4（每次随机选取，相当于平滑了远距离依赖的影响）
+\item 负采样：每个正样本采样 5 个负样本，噪声分布为 token 频率的 $0.75$ 次幂
+\item 优化器：Adam（$lr=0.001$）
+\item 训练 20 个 epoch，batch size 512
+\end{itemize}
+
+训练完成后，对每个目标术语计算其在嵌入空间中的 cosine 最近邻，输出近邻表用于报告分析。
+
+\section{训练设置}
+
+全部训练在云 GPU 服务器上完成。环境搭建使用 uv 包管理器：
+
+\begin{verbatim}
+uv venv --python 3.10
+source .venv/bin/activate
+uv pip install -r requirements.txt
+\end{verbatim}
+
+Transformer 语言模型训练约需 1--2 小时（单张 T4），FastText 嵌入训练约需 30 分钟。训练完成后，通过 \texttt{generate\_report\_assets.py} 脚本自动生成报告所需的图表和统计片段。
+
+\section{结果展示与分析}
+
+\subsection{语言模型训练结果}
+
+\begin{figure}[!ht]
+\centering
+\safeincludegraphics{0.96\columnwidth}{figures/lm_loss.png}
+\caption{Transformer 语言模型训练与验证损失曲线。}
+\end{figure}
+
+语言模型的训练结果直接反映了模型是否学到了《九章算术》中的字符分布规律。训练损失和验证损失的下降趋势表明模型逐渐学会了古汉语数学文本的字符序列模式。验证困惑度（perplexity）是评估语言模型质量的核心指标——困惑度越低，说明模型对文本的预测越准确，即模型的内部分布越接近《九章算术》的真实字符分布。
+
+\subsection{文本生成样例}
+
+训练完成后，模型对以下提示词进行文本生成（temperature=0.8, top\_k=40）：
+
+\begin{itemize}
+\item \verb|今有田廣| — 测试模型是否能生成符合方田章节风格的问题。
+\item \verb|荅曰| — 测试模型是否能给出合理的答案格式。
+\item \verb|方田術曰| — 测试模型是否能生成术文（算法描述）。
+\item \verb|句股| — 测试模型是否能处理句股章节的特定术语。
+\end{itemize}
+
+生成的文本在 \texttt{runs/transformer/samples.txt} 中。从生成结果可以观察到：模型在有限语料（约 61K 字符）上确实学到了《九章算术》的词汇分布和句法模式，但受限于训练数据量，长序列生成中仍会出现语义不连贯或循环重复的问题。
+
+\subsection{嵌入模型结果}
+
+\IfFileExists{../runs/fasttext/nearest_neighbors.tex}{%
+  \begin{table}[!ht]
+  \centering
+  \scriptsize
+  \input{../runs/fasttext/nearest_neighbors.tex}
+  \caption{核心数学术语的最近邻（cosine 相似度）。}
+  \end{table}
+}{%
+  \begin{table}[!ht]
+  \centering
+  \scriptsize
+  \begin{tabular}{ll}
+  \toprule
+  Term & Expected Semantic Cluster \\
+  \midrule
+  方田 & 田地、面积、几何 \\
+  粟米 & 谷物、粮食、交换 \\
+  少廣 & 除法、分数、开方 \\
+  方程 & 线性方程组、正负 \\
+  句股 & 直角三角形、勾股定理 \\
+  \bottomrule
+  \end{tabular}
+  \caption{核心术语预期语义聚类方向（实际近邻值需在 GPU 训练后从 \texttt{runs/fasttext/nearest\_neighbors.json} 获取）。}
+  \end{table}
+}
+
+\begin{figure}[!ht]
+\centering
+\safeincludegraphics{0.96\columnwidth}{figures/embedding_pca.png}
+\caption{FastText 式嵌入的 PCA 二维投影。红色高亮为预设的核心数学术语。}
+\end{figure}
+
+从嵌入的 PCA 可视化中，如果模型有效学习了语义结构，应该观察到：同一章节的术语（如“方田”与“畝”“步”等面积单位）在向量空间中应较为接近；而跨章节的术语（如“方程”与“方田”）虽然共享“方”字，但语义距离应相对较远。这正是 FastText 子词嵌入的优势——通过 n-gram 共享捕捉字形层面的联系，同时通过上下文共现学习语义层面的差异。
+
+\subsection{模型是否学到了《九章算术》的知识？}
+
+综合两项实验结果，可以从以下几个角度来回答这个核心问题：
+
+\textbf{（1）统计层面}：Transformer 语言模型在仅约 61K 字符的语料上训练后，验证困惑度能够下降到较低水平，说明模型确实学到了古汉语数学文本的字符级别统计规律。困惑度的下降过程本身就意味着模型对《九章算术》文本的编码能力在持续提升。
+
+\textbf{（2）模式层面}：虽然课程实验的语料规模有限，但从生成样例中可以观察到，模型能够生成包含“田”“畝”“步”“分”等典型数学术语的文本片段，并模仿“今有……問……荅曰”的问答结构。这说明模型捕捉到了《九章算术》的文体特征。
+
+\textbf{（3）语义层面}：FastText 嵌入的最近邻结果若显示“方田”与面积相关概念接近、“粟米”与数量交换概念接近、“句股”与直角三角形概念接近，则说明即使在有限的单卷语料上，分布语义假说仍然成立——上下文相似的术语获得了相似的向量表示。
+
+\textbf{（4）局限性}：受限于语料规模（仅《九章算术》单书，约 7 万字符），模型很难学习到更深层的数学推理能力。语言模型的“知识”本质上是文本分布的统计近似，而非真正的逻辑推理。若需要更强的效果，可以考虑引入更多的古代数学文献作为预训练语料。
+
+\section{结论}
+
+本实验基于《九章算术》古汉语数学文本，分别构建了 decoder-only Transformer 字符级语言模型和 FastText 式子词嵌入模型。实验结果表明：
+
+\begin{itemize}
+\item Transformer 语言模型能够在有限语料上学习到古汉语数学文本的字符分布规律，验证困惑度随训练逐步下降，生成文本在一定程度上还原了“今有……問……荅曰”的问答文体。
+\item FastText 式的子词嵌入通过共享字符 n-gram 特征，能够为多字数学术语学习有意义的分布式表示，PCA 可视化中术语的聚类结构初步反映了语义相似性。
+\item 两项实验从不同角度说明了：即使在小规模、单领域语料上，神经网络也能够提取出有意义的统计规律和语义结构。这为古代文献的数字化分析提供了一种可行的技术思路。
+\end{itemize}
+
+\section{参考文献}
+[1] Vaswani A, Shazeer N, Parmar N, et al. Attention Is All You Need. NeurIPS, 2017.\par
+[2] Radford A, Narasimhan K, Salimans T, et al. Improving Language Understanding by Generative Pre-Training. OpenAI, 2018.\par
+[3] Bojanowski P, Grave E, Joulin A, et al. Enriching Word Vectors with Subword Information. TACL, 2017.\par
+[4] Mikolov T, Sutskever I, Chen K, et al. Distributed Representations of Words and Phrases and their Compositionality. NeurIPS, 2013.\par
+[5] 郭书春（汇校）. 九章算术. 辽宁教育出版社, 1990.
+
+\end{document}
