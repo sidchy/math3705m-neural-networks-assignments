@@ -2,7 +2,7 @@
 
 Usage::
 
-    python src/generate_report_assets.py --lm runs/transformer --embed runs/fasttext --out report/figures
+    python src/generate_report_assets.py --lm runs/transformer --embed runs/fasttext --probe runs/probe --out report/figures
 """
 
 from __future__ import annotations
@@ -222,6 +222,68 @@ def generate_samples_tex(lm_dir: Path, out_path: Path):
 
 
 # ──────────────────────────────────────────────────────────────────────
+# 5. Answer probe LaTeX snippet
+# ──────────────────────────────────────────────────────────────────────
+
+
+def generate_answer_probe_tex(probe_dir: Path, out_path: Path):
+    """Read answer_probe.json and write a concise LaTeX result table."""
+    probe_path = probe_dir / "answer_probe.json"
+    _require(probe_path, "answer_probe.json")
+
+    with open(probe_path, encoding="utf-8") as f:
+        payload = json.load(f)
+
+    summary = payload["summary"]
+    examples = sorted(payload["examples"], key=lambda x: -x["margin"])[:3]
+
+    lines = [
+        r"\begin{table}[!ht]",
+        r"\centering",
+        r"\scriptsize",
+        r"\begin{tabular}{lr}",
+        r"\toprule",
+        r"Metric & Value \\",
+        r"\midrule",
+        rf"Probe examples & {summary['num_examples']} \\",
+        rf"Accuracy & {summary['accuracy'] * 100:.2f}\% \\",
+        rf"Avg. true-answer loss & {summary['avg_true_loss']:.3f} \\",
+        rf"Avg. wrong-answer loss & {summary['avg_wrong_loss']:.3f} \\",
+        rf"Avg. margin & {summary['avg_margin']:.3f} \\",
+        r"\bottomrule",
+        r"\end{tabular}",
+        r"\caption{答案判别探针结果。Margin = wrong loss $-$ true loss，越大表示模型越偏好真实答案。}",
+        r"\end{table}",
+        "",
+        r"\begin{table}[!ht]",
+        r"\centering",
+        r"\scriptsize",
+        r"\begin{tabular}{p{0.18\columnwidth}p{0.34\columnwidth}p{0.34\columnwidth}r}",
+        r"\toprule",
+        r"ID & True & Wrong & Margin \\",
+        r"\midrule",
+    ]
+    for ex in examples:
+        lines.append(
+            f"{ex['id']} & {_latex_escape(ex['true_answer'])} & "
+            f"{_latex_escape(ex['wrong_answer'])} & {ex['margin']:.3f} \\\\"
+        )
+    lines.extend(
+        [
+            r"\bottomrule",
+            r"\end{tabular}",
+            r"\caption{模型最明显偏好真实答案的探针样例。}",
+            r"\end{table}",
+        ]
+    )
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"Saved answer probe table → {out_path}")
+
+
+# ──────────────────────────────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────────────────────────────
 
@@ -232,6 +294,7 @@ def main():
     )
     ap.add_argument("--lm", required=True, help="Path to LM run directory")
     ap.add_argument("--embed", required=True, help="Path to embedding run directory")
+    ap.add_argument("--probe", default=None, help="Path to answer-probe run directory")
     ap.add_argument("--data", default="九章算经 2.txt", help="Path to corpus .txt file")
     ap.add_argument("--out", required=True, help="Output directory for figures")
     args = ap.parse_args()
@@ -262,6 +325,13 @@ def main():
         generate_samples_tex(lm_dir, out_dir / "generated_samples.tex")
     except SystemExit:
         print("(Skipping generated samples — samples.json not found)")
+
+    # Answer probe
+    if args.probe is not None:
+        try:
+            generate_answer_probe_tex(Path(args.probe), out_dir / "answer_probe.tex")
+        except SystemExit:
+            print("(Skipping answer probe — answer_probe.json not found)")
 
     # Corpus stats
     generate_corpus_stats(args.data, out_dir / "corpus_stats.tex")
