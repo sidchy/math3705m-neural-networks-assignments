@@ -111,3 +111,14 @@ tectonic report/main.tex
 | 词表大小 | ~1,048 |
 | Transformer 参数 | ~3.73M |
 | 嵌入维度 | 100 |
+
+## 模型权重与结果
+
+训练好的权重和报告结果已上传到 GitHub Release `v4.0`：
+
+- [Transformer checkpoint.pt](https://github.com/sidchy/math3705m-neural-networks-assignments/releases/download/v4.0/checkpoint.pt)
+- [FastText embeddings.pt](https://github.com/sidchy/math3705m-neural-networks-assignments/releases/download/v4.0/embeddings.pt)
+- [Report artifacts zip](https://github.com/sidchy/math3705m-neural-networks-assignments/releases/download/v4.0/task4_report_artifacts.zip)
+
+Release 页面：
+https://github.com/sidchy/math3705m-neural-networks-assignments/releases/tag/v4.0
