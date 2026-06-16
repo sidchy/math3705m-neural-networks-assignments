@@ -9,9 +9,10 @@ from task5lib.io import read_jsonl, write_json, write_jsonl
 
 
 def build_dpo(sft_train: str | Path, out_dir: str | Path, sample_size: int, seed: int = 42) -> dict:
+    rng = random.Random(seed)
     rows = [row for row in read_jsonl(sft_train) if row["task_type"] in {"wz_to_zh", "example_translate"}]
-    random.Random(seed).shuffle(rows)
-    records = [make_dpo_record(row).to_dict() for row in rows[:sample_size]]
+    rng.shuffle(rows)
+    records = [make_dpo_record(row, rng=rng).to_dict() for row in rows[:sample_size]]
     cut = max(1, int(len(records) * 0.9))
     out_dir = Path(out_dir)
     write_jsonl(out_dir / "dpo_train.jsonl", records[:cut])
