@@ -16,7 +16,7 @@ def group_id_for_row(row: pd.Series) -> str:
     source = str(row["source_code"])
     row_id = int(row["row_id"])
     if "entry" in row and str(row.get("entry", "")).strip():
-        return f"{source}:entry:{row['entry']}"
+        return f"entry:{row['entry']}"
     if source == "07" and str(row.get("source_doc", "")).strip():
         return f"{source}:doc:{row['source_doc']}"
     return f"{source}:row:{row_id}"

@@ -38,7 +38,7 @@ def plot_pretrain(metrics_path: Path, out_path: Path) -> None:
 def evaluate(data_dir: str, runs_dir: str, out_dir: str) -> dict:
     out = ensure_dir(out_dir)
     rows = []
-    for model_name, rel in [("SFT", "sft/predictions.jsonl"), ("DPO", "dpo/predictions.jsonl")]:
+    for model_name, rel in [("Base", "base/predictions.jsonl"), ("SFT", "sft/predictions.jsonl"), ("DPO", "dpo/predictions.jsonl")]:
         path = Path(runs_dir) / rel
         if path.exists():
             preds, refs = load_predictions(path)

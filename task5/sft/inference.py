@@ -20,7 +20,7 @@ def generate_one(model, tokenizer, instruction: str, input_text: str, max_new_to
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_or_adapter", required=True)
+    parser.add_argument("--model_or_adapter", default="")
     parser.add_argument("--base_model", default="unsloth/Qwen3.5-2B")
     parser.add_argument("--test", required=True)
     parser.add_argument("--out", required=True)
@@ -35,7 +35,8 @@ def main() -> None:
         dtype=None,
         load_in_4bit=False,
     )
-    model.load_adapter(args.model_or_adapter)
+    if args.model_or_adapter:
+        model.load_adapter(args.model_or_adapter)
 
     test_rows = read_jsonl(args.test)
     wz_rows = [row for row in test_rows if row["task_type"] == "wz_to_zh"]
@@ -51,7 +52,7 @@ def main() -> None:
             "reference": row["output"],
             "prediction": pred,
             "task_type": row["task_type"],
-            "model": args.model_or_adapter,
+            "model": args.model_or_adapter or args.base_model,
         })
 
     out_path = Path(args.out)

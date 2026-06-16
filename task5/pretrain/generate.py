@@ -19,7 +19,9 @@ def load_vocab(path: str) -> CharVocab:
 def generate_samples(checkpoint: str, vocab_path: str, prompts: list[str], out: str) -> list[dict]:
     vocab = load_vocab(vocab_path)
     payload = torch.load(checkpoint, map_location="cpu")
-    cfg = GPTConfig(vocab_size=len(vocab.stoi), **payload["config"])
+    cfg_dict = {**payload["config"]}
+    cfg_dict.pop("vocab_size", None)
+    cfg = GPTConfig(vocab_size=len(vocab.stoi), **cfg_dict)
     model = GPT(cfg)
     model.load_state_dict(payload["model"])
     model.eval()

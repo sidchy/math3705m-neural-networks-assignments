@@ -37,6 +37,24 @@ def build_sft(cleaned_dir: str | Path, splits_dir: str | Path, out_dir: str | Pa
         for row in rows:
             by_task[row["task_type"]] = by_task.get(row["task_type"], 0) + 1
         stats[split] = {"rows": len(rows), "by_task": by_task}
+
+    # Exact triple dedup: remove train records that overlap with val/test
+    val_test_triples = set()
+    for split in ["val", "test"]:
+        for row in buckets.get(split, []):
+            val_test_triples.add((row["instruction"], row["input"], row["output"]))
+    if val_test_triples and "train" in buckets:
+        before = len(buckets["train"])
+        buckets["train"] = [r for r in buckets["train"] if (r["instruction"], r["input"], r["output"]) not in val_test_triples]
+        after = len(buckets["train"])
+        if before > after:
+            write_jsonl(out_dir / "sft_train.jsonl", buckets["train"])
+            by_task: dict[str, int] = {}
+            for row in buckets["train"]:
+                by_task[row["task_type"]] = by_task.get(row["task_type"], 0) + 1
+            stats["train"] = {"rows": after, "by_task": by_task}
+            stats["dedup_train_removed"] = before - after
+
     write_json(out_dir / "sft_stats.json", stats)
     return stats
 

@@ -10,7 +10,7 @@ def test_collect_groups_uses_entry_for_lexicon():
         "entry": ["阿爸", "阿爸"],
     })
     groups = collect_groups({"01": df})
-    assert groups["01:entry:阿爸"] == ["01:1", "01:2"]
+    assert groups["entry:阿爸"] == ["01:1", "01:2"]
 
 
 def test_assign_splits_has_no_group_overlap():

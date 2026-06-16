@@ -16,11 +16,13 @@ class CharVocab:
     @classmethod
     def build(cls, text: str) -> "CharVocab":
         chars = sorted(set(text))
-        stoi = {ch: i for i, ch in enumerate(chars)}
+        stoi = {"<unk>": 0}
+        for i, ch in enumerate(chars):
+            stoi[ch] = i + 1
         return cls(stoi=stoi, itos={i: ch for ch, i in stoi.items()})
 
     def encode(self, text: str) -> list[int]:
-        return [self.stoi[ch] for ch in text if ch in self.stoi]
+        return [self.stoi.get(ch, 0) for ch in text]
 
     def decode(self, ids: list[int]) -> str:
         return "".join(self.itos[int(i)] for i in ids)
