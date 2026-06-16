@@ -1,0 +1,16 @@
+train_text: data/final/pretrain_train.txt
+val_text: data/final/pretrain_val.txt
+out_dir: runs/pretrain
+block_size: 256
+n_layer: 6
+n_head: 6
+n_embd: 384
+dropout: 0.1
+batch_size: 32
+max_epochs: 100
+steps_per_epoch: 200
+learning_rate: 0.0003
+weight_decay: 0.01
+device: cuda
+seed: 42
+early_stopping_patience: 10

@@ -1,0 +1,15 @@
+train_text: data/final/pretrain_train.txt
+val_text: data/final/pretrain_val.txt
+out_dir: runs/pretrain_smoke
+block_size: 64
+n_layer: 2
+n_head: 2
+n_embd: 64
+dropout: 0.1
+batch_size: 8
+max_epochs: 1
+steps_per_epoch: 10
+learning_rate: 0.0003
+weight_decay: 0.01
+device: cpu
+seed: 42
