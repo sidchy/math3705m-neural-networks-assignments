@@ -1,0 +1,50 @@
+aext-assistant @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_d5fxz3l2ix/croot/aext-assistant_1746560160060/work
+aext-assistant-server @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_1emcn1_yt0/croot/aext-assistant-server_1746552985810/work
+aext-core @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_2eg8ig5bzd/croot/aext-core_1746546095117/work
+aext-core-server @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_1eo4dumd8o/croot/aext-core-server_1746542359934/work
+aext-panels @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_88neb0jwio/croot/aext-panels_1746560092300/work
+aext-panels-server @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_f8jcm1930j/croot/aext-panels-server_1746552964188/work
+aext-project-filebrowser-server @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_32_va59s0l/croot/aext-project-filebrowser-server_1746562207762/work/backend_lib/project_filebrowser
+aext-share-notebook @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_355mar42bl/croot/aext-share-notebook_1746556798423/work
+aext-share-notebook-server @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_c8l1ebgxcq/croot/aext-share-notebook-server_1746552715655/work
+aext-shared @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_9etxpmoe8u/croot/aext-shared_1746540522024/work
+aext-toolbox @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_4fo05xs80k/croot/anaconda-toolbox_1747230963854/work
+aext_environments_server @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_44sltsc9tr/croot/aext-environments-server_1746560394654/work/backend_lib/environments
+aiobotocore @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b2htsn1rgl/croot/aiobotocore_1738237874912/work
+aiofiles==24.1.0
+aiohappyeyeballs @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b38qlemj37/croot/aiohappyeyeballs_1734469403568/work
+aiohttp @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_44bhte2f2d/croot/aiohttp_1734692700992/work
+aioitertools @ file:///tmp/build/80754af9/aioitertools_1607109665762/work
+aiosignal @ file:///tmp/build/80754af9/aiosignal_1637843061372/work
+alabaster @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/alabaster_1728591579756/work
+alembic @ file:///opt/miniconda3/conda-bld/alembic_1763718274431/work
+alibabacloud-credentials==1.0.8
+alibabacloud-credentials-api==1.0.0
+alibabacloud-tea==0.4.3
+alibabacloud-tea-openapi==0.4.4
+alibabacloud-tea-util==0.3.14
+alibabacloud_gateway_spi==0.0.3
+aliyun-log-python-sdk==0.9.46
+altair @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_7ew3pavrjt/croot/altair_1743016738697/work
+anaconda-anon-usage @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_degjgm8ut1/croot/anaconda-anon-usage_1749054786234/work
+anaconda-auth @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_c9m1keso7m/croot/anaconda-cloud-auth-split_1747863789573/work
+anaconda-catalogs @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_90e2gpmhv3/croot/anaconda-catalogs_1747774728177/work
+anaconda-cli-base @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_08m4xcbj7q/croot/anaconda-cli-base_1741369478940/work
+anaconda-client @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_52pw426gad/croot/anaconda-client_1743199588333/work
+anaconda-navigator @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_57gf3vgn69/croot/anaconda-navigator_1749737717526/work
+anaconda-project @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_dcsecg0xhr/croot/anaconda-project_1746215306884/work
+annotated-doc==0.0.4
+annotated-types @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/annotated-types_1728588668736/work
+anthropic==0.97.0
+anyio @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_d9l4uro_qv/croot/anyio_1745334654441/work
+appdirs==1.4.4
+applaunchservices @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/applaunchservices_1728595929050/work
+appnope @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/appnope_1728587432692/work
+appscript @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_1abn3g1r3s/croot/appscript_1738045930024/work
+APScheduler==3.11.2
+archspec @ file:///croot/archspec_1709217642129/work
+argon2-cffi @ file:///opt/conda/conda-bld/argon2-cffi_1645000214183/work
+argon2-cffi-bindings @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_2ef471wnyf/croot/argon2-cffi-bindings_1736182451265/work
+arrow @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/arrow_1731714085106/work
+astroid @ file:///Users/builder/cbouss/buildout/croot/astroid_1739484442213/work
+astropy @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a0fm0x2tco/croot/astropy_1738094414286/work
