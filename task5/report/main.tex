@@ -1,0 +1,56 @@
+\documentclass[UTF8,twocolumn]{ctexart}
+\usepackage[a4paper,margin=1.8cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+
+\title{温州话低资源大语言模型适配实验}
+\author{Sidney Chai}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文基于多来源温州话语料，构建字符级预训练、指令微调和偏好优化三阶段实验，分析低资源方言场景下数据清洗、模型适配和评估方法的实际效果。
+\end{abstract}
+
+\section{研究目标}
+说明温州话低资源 NLP 的背景、项目目标和成功标准。
+
+\section{相关工作}
+概述低资源语言处理、汉语方言计算、LoRA 微调和 DPO 偏好优化。
+
+\section{数据集与预处理}
+描述 13 个原始文件、勘误、去重、固定划分和防泄漏策略。
+
+\section{实验一：字符级预训练}
+报告模型配置、unigram baseline、loss 曲线和生成样例。
+
+\section{实验二：SFT 翻译微调}
+报告基座模型、LoRA 配置、训练设置和测试集结果。
+
+\section{实验三：DPO 偏好优化}
+报告偏好对构造、训练参数、SFT 与 DPO 对比，以及负结果可能原因。
+
+\section{综合评估}
+\input{figures/auto_metrics_table.tex}
+
+\section{错误分析}
+分析漏译、错译、幻觉、重复和输出语言错误。
+
+\section{局限性}
+讨论语料规模、方言书写差异、自动指标不足和 DPO 数据质量。
+
+\section{结论}
+总结三阶段实验的主要发现。
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{vaswani2017attention} Vaswani et al. Attention Is All You Need. 2017.
+\bibitem{hu2021lora} Hu et al. LoRA: Low-Rank Adaptation of Large Language Models. 2021.
+\bibitem{rafailov2023dpo} Rafailov et al. Direct Preference Optimization. 2023.
+\end{thebibliography}
+
+\end{document}
