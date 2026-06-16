@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+data/raw/
+data/cleaned/
+data/splits/
+data/final/
+data/easydataset/
+runs/
+report/*.pdf
+report/figures/*.png
+report/figures/*.tex
+*.pt
+*.safetensors
